@@ -43,14 +43,14 @@
                     {{ item.home }}</span>
                   </span>
                 </td>
-                <td v-if="item.home_diff > 0" style="background: green">
+                <td v-if="item.draw_diff > 0" style="background: green">
                   <span>
-                    {{ item.home }}</span>
+                    {{ item.draw }}</span>
                   </span>
                 </td>
-                <td v-if="item.home_diff < 0" style="background: red">
+                <td v-if="item.home_away < 0" style="background: red">
                   <span>
-                    {{ item.home }}</span>
+                    {{ item.away }}</span>
                   </span>
                 </td>
               </template>
