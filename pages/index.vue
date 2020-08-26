@@ -24,7 +24,6 @@
         </template>
         <template v-slot:item._x="{ item }">
           <span>{{ item.odds[item.odds.length - 1].draw }}</span>
-          <span>x</span>
         </template>
         <template v-slot:item._2="{ item }">
           <span>{{ item.odds[item.odds.length - 1].away }}</span>
