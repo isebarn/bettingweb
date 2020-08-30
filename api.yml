@@ -1,3 +1,10 @@
 Data:
   - method: get
     get: /
+
+League:
+  - method: list
+    get: /leagues
+
+  - method: league
+    get: /leagues/league
