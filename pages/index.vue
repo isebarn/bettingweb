@@ -1,15 +1,75 @@
 <template>
   <v-container>
     <v-row>
-      <v-col cols="5">
-        <v-data-table
-          :headers="league_headers"
-          :items="league_items"
-          @click:row="selectLeague"
-        />
+      <v-col :cols="match_items.length > 0 ? 3 : 12">
+        <v-card>
+          <v-card-title>
+            Leagues
+            <v-spacer />
+            <v-text-field
+              v-model="search"
+              append-icon="mdi-magnify"
+              label="Search"
+              single-line
+              hide-details
+            />
+          </v-card-title>
+          <v-data-table
+            :headers="league_headers"
+            :items="league_items"
+            :search="search"
+            @click:row="selectLeague"
+          />
+        </v-card>
       </v-col>
-      <v-col cols="7">
-        <v-row v-for="match in match_items" :key="match.Id">
+      <v-col v-if="match_items.length > 0" :cols="matches.length > 0 ? 3 : 9">
+        <v-card>
+          <v-card-title>
+            Matches
+            <v-spacer />
+            <v-text-field
+              v-model="search"
+              append-icon="mdi-magnify"
+              label="Search"
+              single-line
+              hide-details
+            />
+          </v-card-title>
+          <v-data-table
+            :headers="match_overview_headers"
+            :items="match_items"
+            @click:row="selectMatch"
+          >
+            <template v-slot:item.Match="{ item }">
+              <span>{{ item._home.Value }} - {{ item._away.Value }}</span></br>
+              <span>{{ formatDate(item.Time) }}</span></br>
+            </template>
+            <template v-slot:item.1="{ item }">
+              <td><span> {{ item.odds[item.odds.length -1].home }}</span></td>
+            </template>
+            <template v-slot:item.X="{ item }">
+              <td><span> {{ item.odds[item.odds.length -1].draw }}</span></td>
+            </template>
+            <template v-slot:item.2="{ item }">
+              <td><span> {{ item.odds[item.odds.length -1].away }}</span></td>
+            </template>
+            <template v-slot:item.H1="{ item }">
+              <td><span> {{ item.odds[item.odds.length -1].H1 }}</span></td>
+            </template>
+            <template v-slot:item.H2="{ item }">
+              <td><span> {{ item.odds[item.odds.length -1].H2 }}</span></td>
+            </template>
+            <template v-slot:item.O="{ item }">
+              <td><span> {{ item.odds[item.odds.length -1].O }}</span></td>
+            </template>
+            <template v-slot:item.U="{ item }">
+              <td><span> {{ item.odds[item.odds.length -1].U }}</span></td>
+            </template>
+          </v-data-table>
+        </v-card>
+      </v-col>
+      <v-col v-if="matches.length" cols="6">
+        <v-row v-for="match in matches" :key="match.Id">
           <v-container fluid>
             <v-card>
               <v-card-title primary-title>
@@ -18,6 +78,9 @@
               <v-data-table
                 :headers="match_headers"
                 :items="match.odds"
+                dense
+                hide-default-footer
+                disable-pagination
               >
                 <template v-slot:item.Time="{ item }">
                   <span> {{ item.Date === null ? formatTime(item.Time) : formatDate(item.Time) }}</span>
@@ -66,6 +129,7 @@ export default {
     const self = this
     this.$api.League.list()
       .then(function (response) {
+        console.log(response.data)
         self.league_items = response.data
       })
       .catch(function (error) {
@@ -78,6 +142,9 @@ export default {
 
   data () {
     return {
+      god: false,
+      search: '',
+      matches: [],
       league_items: [],
       league_headers: [
         {
@@ -86,6 +153,52 @@ export default {
         }
       ],
       match_items: [],
+      match_overview: [
+        {
+          text: 'Match',
+          value: 'Match'
+        },
+        {
+          text: 'Time',
+          value: 'Time',
+          align: 'end'
+        },
+        {
+          text: '1',
+          value: '1',
+          align: 'end'
+        },
+        {
+          text: 'x',
+          value: 'X',
+          align: 'end'
+        },
+        {
+          text: '2',
+          value: '2',
+          align: 'end'
+        },
+        {
+          text: 'H1',
+          value: 'H1',
+          align: 'end'
+        },
+        {
+          text: 'H2',
+          value: 'H2',
+          align: 'end'
+        },
+        {
+          text: 'O',
+          value: 'O',
+          align: 'end'
+        },
+        {
+          text: 'U',
+          value: 'U',
+          align: 'end'
+        }
+      ],
       match_headers: [
         {
           text: 'Time',
@@ -131,6 +244,14 @@ export default {
     }
   },
 
+  computed: {
+    match_overview_headers () {
+      return this.matches.length > 0
+        ? this.match_overview.filter(x => ['Match'].includes(x.value))
+        : this.match_overview
+    }
+  },
+
   methods: {
     sameDay (d1, d2) {
       return d1.getFullYear() === d2.getFullYear() &&
@@ -138,7 +259,7 @@ export default {
         d1.getDate() === d2.getDate()
     },
 
-    selectLeague (item, a) {
+    selectLeague (item) {
       const self = this
       this.$api.League.league({ league: item.Id })
         .then(function (response) {
@@ -182,6 +303,7 @@ export default {
           }
           // console.log(response.data.matches)
           self.match_items = response.data.matches
+          console.log(self.match_items)
         })
         .catch(function (error) {
           console.log(error)
@@ -189,6 +311,11 @@ export default {
         .then(function () {
           self.loading = false
         })
+    },
+
+    selectMatch (item) {
+      console.log(item)
+      this.matches = [item]
     },
 
     formatDate (value) {
