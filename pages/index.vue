@@ -1,13 +1,13 @@
 <template>
   <v-container>
     <v-row>
-      <v-col :cols="match_items.length > 0 ? 3 : 12">
+      <v-col :cols="league_matches.length > 0 ? 3 : 12">
         <v-card>
           <v-card-title>
             Leagues
             <v-spacer />
             <v-text-field
-              v-model="search"
+              v-model="league_search"
               append-icon="mdi-magnify"
               label="Search"
               single-line
@@ -17,93 +17,91 @@
           <v-data-table
             :headers="league_headers"
             :items="league_items"
-            :search="search"
+            :search="league_search"
+            :loading="leagues_loading"
+            class="elevation-0"
             @click:row="selectLeague"
           />
         </v-card>
       </v-col>
-      <v-col v-if="match_items.length > 0" :cols="matches.length > 0 ? 3 : 9">
+      <v-col
+        v-if="league_matches.length > 0"
+        :cols="competition ? 3 : 9"
+      >
         <v-card>
           <v-card-title>
             Matches
+            <v-spacer />
+            <v-text-field
+              v-model="match_search"
+              append-icon="mdi-magnify"
+              label="Search"
+              single-line
+              hide-details
+            />
           </v-card-title>
           <v-data-table
-            :headers="match_overview_headers"
-            :items="match_items"
-            @click:row="selectMatch"
+            :headers="league_matches_headers"
+            elevation-0
+            :items="league_matches"
+            :loading="loading_league_matches"
+            :search="match_search"
+            :custom-filter="matchSearchFilter"
+            class="elevation-0"
+            @click:row="selectCompetition"
           >
             <template v-slot:item.Match="{ item }">
-              <span>{{ item._home.Value }} - {{ item._away.Value }}</span></br>
-              <span>{{ formatDate(item.Time) }}</span></br>
-            </template>
-            <template v-slot:item.1="{ item }">
-              <td><span> {{ item.odds[item.odds.length -1].home }}</span></td>
-            </template>
-            <template v-slot:item.X="{ item }">
-              <td><span> {{ item.odds[item.odds.length -1].draw }}</span></td>
-            </template>
-            <template v-slot:item.2="{ item }">
-              <td><span> {{ item.odds[item.odds.length -1].away }}</span></td>
-            </template>
-            <template v-slot:item.H1="{ item }">
-              <td><span> {{ item.odds[item.odds.length -1].H1 }}</span></td>
-            </template>
-            <template v-slot:item.H2="{ item }">
-              <td><span> {{ item.odds[item.odds.length -1].H2 }}</span></td>
-            </template>
-            <template v-slot:item.O="{ item }">
-              <td><span> {{ item.odds[item.odds.length -1].O }}</span></td>
-            </template>
-            <template v-slot:item.U="{ item }">
-              <td><span> {{ item.odds[item.odds.length -1].U }}</span></td>
+              <span>{{ item.home.Value }} - {{ item.away.Value }}</span></br>
+              <span>{{ formatDate(item.competition.Date) }}</span></br>
             </template>
           </v-data-table>
         </v-card>
       </v-col>
-      <v-col v-if="matches.length" cols="6">
-        <v-row v-for="match in matches" :key="match.Id">
-          <v-container fluid>
-            <v-card>
-              <v-card-title primary-title>
-                {{ match._home.Value + ' - ' + match._away.Value + ' - ' + formatDate(match.Time) }}
-              </v-card-title>
+      <v-col v-if="competition" cols="6">
+        <v-card-title>
+          Markets
+          <v-spacer />
+          <v-text-field
+            v-model="market_search"
+            append-icon="mdi-magnify"
+            label="Search"
+            single-line
+            hide-details
+          />
+        </v-card-title>
+        <v-data-table
+          :headers="market_headers"
+          :items="competition.markets"
+          :loading="loading_competition"
+          single-expand
+          :search="market_search"
+          item-key="Id"
+          :expanded.sync="expanded"
+          @click:row="selectMarket"
+        >
+          <template v-slot:expanded-item="{ headers }">
+            <td :colspan="headers.length" style="margin: 0px; padding: 0px">
               <v-data-table
-                :headers="match_headers"
-                :items="match.odds"
+                :headers="price_headers"
+                :items="prices"
                 dense
+                :loading="loading_prices"
+                :items-per-page="-1"
                 hide-default-footer
-                disable-pagination
+                hide-default-header
               >
+                <template v-slot:item.Value="{ item }">
+                  <td :class="[ item.increment == 0 ? 'equal' : (item.increment < 0 ? 'less' : 'more')]">
+                    {{ parseFloat(item.Value).toFixed(2) }}
+                  </td>
+                </template>
                 <template v-slot:item.Time="{ item }">
-                  <span> {{ item.Date === null ? formatTime(item.Time) : formatDate(item.Time) }}</span>
-                </template>
-                <template v-slot:item.1="{ item }">
-                  <FootballRow :display="item.home" :compare-to="item._1" pa-0 ma-0 />
-                </template>
-                <template v-slot:item.X="{ item }">
-                  <FootballRow :display="item.draw" :compare-to="item._X" pa-0 ma-0 />
-                </template>
-                <template v-slot:item.2="{ item }">
-                  <FootballRow :display="item.away" :compare-to="item._2" pa-0 ma-0 />
-                </template>
-
-                <template v-slot:item.H1="{ item }">
-                  <FootballRow :display="item.H1" :compare-to="item._H1" pa-0 ma-0 />
-                </template>
-                <template v-slot:item.H2="{ item }">
-                  <FootballRow :display="item.H2" :compare-to="item._H2" pa-0 ma-0 />
-                </template>
-                <template v-slot:item.O="{ item }">
-                  <FootballRow :display="item.O" :compare-to="item._O" pa-0 ma-0 />
-                </template>
-                <template v-slot:item.U="{ item }">
-                  <FootballRow :display="item.U" :compare-to="item._U" pa-0 ma-0 />
+                  <td> {{ item.Day ? formatDate(item.Time) : formatTime(item.Time) }}</td>
                 </template>
               </v-data-table>
-            </v-card>
-            <v-divider />
-          </v-container>
-        </v-row>
+            </td>
+          </template>
+        </v-data-table>
       </v-col>
     </v-row>
   </v-container>
@@ -111,203 +109,158 @@
 
 <script>
 import moment from 'moment'
-import FootballRow from '~/components/FootballRow.vue'
 export default {
-  components: {
-    FootballRow
-  },
-
   fetch () {
     const self = this
+    self.leagues_loading = true
     this.$api.League.list()
       .then(function (response) {
-        console.log(response.data)
         self.league_items = response.data
       })
       .catch(function (error) {
         console.log(error)
       })
       .then(function () {
-        self.loading = false
+        self.leagues_loading = false
       })
   },
 
   data () {
     return {
-      god: false,
-      search: '',
-      matches: [],
+      expanded: [],
+      loading_prices: false,
+      current_market: null,
+      prices: [],
+      league_search: '',
+      match_search: '',
+      market_search: '',
+      leagues_loading: false,
+      loading_league_matches: false,
+      competition: null,
+      market_headers: [
+        {
+          text: 'Market',
+          value: 'collection.Value'
+        }
+      ],
+      league_matches: [],
+      league_matches_headers: [
+        {
+          text: 'Match',
+          value: 'Match'
+        }
+      ],
       league_items: [],
       league_headers: [
         {
           text: 'League',
           value: 'Value'
         }
-      ],
-      match_items: [],
-      match_overview: [
-        {
-          text: 'Match',
-          value: 'Match'
-        },
-        {
-          text: 'Time',
-          value: 'Time',
-          align: 'end'
-        },
-        {
-          text: '1',
-          value: '1',
-          align: 'end'
-        },
-        {
-          text: 'x',
-          value: 'X',
-          align: 'end'
-        },
-        {
-          text: '2',
-          value: '2',
-          align: 'end'
-        },
-        {
-          text: 'H1',
-          value: 'H1',
-          align: 'end'
-        },
-        {
-          text: 'H2',
-          value: 'H2',
-          align: 'end'
-        },
-        {
-          text: 'O',
-          value: 'O',
-          align: 'end'
-        },
-        {
-          text: 'U',
-          value: 'U',
-          align: 'end'
-        }
-      ],
-      match_headers: [
-        {
-          text: 'Time',
-          value: 'Time',
-          align: 'end'
-        },
-        {
-          text: '1',
-          value: '1',
-          align: 'end'
-        },
-        {
-          text: 'x',
-          value: 'X',
-          align: 'end'
-        },
-        {
-          text: '2',
-          value: '2',
-          align: 'end'
-        },
-        {
-          text: 'H1',
-          value: 'H1',
-          align: 'end'
-        },
-        {
-          text: 'H2',
-          value: 'H2',
-          align: 'end'
-        },
-        {
-          text: 'O',
-          value: 'O',
-          align: 'end'
-        },
-        {
-          text: 'U',
-          value: 'U',
-          align: 'end'
-        }
       ]
     }
   },
 
   computed: {
-    match_overview_headers () {
-      return this.matches.length > 0
-        ? this.match_overview.filter(x => ['Match'].includes(x.value))
-        : this.match_overview
+    price_values () {
+      return self.prices
+    },
+
+    price_headers () {
+      const results = []
+      if (!this.current_market) { return results }
+
+      // OPTIONS LINE
+      if (this.current_market.Headers[0] !== '') {
+        return [
+          {
+            text: 'Result',
+            value: 'SN'
+          },
+          {
+            text: this.current_market.collection.Value,
+            value: 'Value'
+          },
+          {
+            text: 'Time',
+            value: 'Time'
+          }
+        ]
+      }
+      // VAL-OPTIONS LINE
+      if (this.current_market.Headers[0] === '') {
+        results.append({ text: 'Result', value: 'MN' })
+        for (let i = 1; this.current_market.Headers.length; i++) {
+          results.append({ text: this.current_market.Headers[i].Value, value: 'Value' })
+        }
+
+        return results
+      }
+
+      for (let i = this.current_market.Headers.length - 1; i >= 0; i--) {
+        const item = {}
+        item.text = this.current_market.Headers[i]
+        item.value = 'Value'
+        results.push(item)
+      }
+      return results
     }
   },
 
   methods: {
-    sameDay (d1, d2) {
-      return d1.getFullYear() === d2.getFullYear() &&
-        d1.getMonth() === d2.getMonth() &&
-        d1.getDate() === d2.getDate()
+    matchSearchFilter (value, search, item) {
+      return item.home.Value.toLowerCase().includes(search.toLowerCase())
     },
 
-    selectLeague (item) {
+    selectMarket (item) {
+      if (this.expanded.length > 0 && this.expanded[0] === item) {
+        this.expanded = []
+        return
+      }
+      console.log(item)
+      this.expanded = [item]
       const self = this
-      this.$api.League.league({ league: item.Id })
+      self.current_market = item
+      self.loading_prices = true
+      this.$api.Match.prices({ market: item.Id, collection: item.Collection })
         .then(function (response) {
-          for (let i = 0; i < response.data.matches.length; i++) {
-            const match = response.data.matches[i]
-
-            const odd = {}
-            odd.home = match._1
-            odd.draw = match._X
-            odd.away = match._2
-            odd.H1 = match._H1
-            odd.H2 = match._H2
-            odd.O = match._O
-            odd.U = match._U
-            odd._1 = 0
-            odd._X = 0
-            odd._2 = 0
-            odd._H1 = 0
-            odd._H2 = 0
-            odd._O = 0
-            odd._U = 0
-            odd.Time = new Date(match.Created)
-            odd.Date = null
-            match.odds.unshift(odd)
-
-            if (match.odds.length > 1) {
-              for (let j = 1; j < match.odds.length; j++) {
-                const odd = match.odds[j]
-                const oddBefore = match.odds[j - 1]
-                odd.home = Math.round(100 * (odd._1 / 100 + oddBefore.home)) / 100
-                odd.draw = Math.round(100 * (odd._X / 100 + oddBefore.draw)) / 100
-                odd.away = Math.round(100 * (odd._2 / 100 + oddBefore.away)) / 100
-                odd.H1 = Math.round(100 * (odd._H1 / 100 + oddBefore.H1)) / 100
-                odd.H2 = Math.round(100 * (odd._H2 / 100 + oddBefore.H2)) / 100
-                odd.O = Math.round(100 * (odd._O / 100 + oddBefore.O)) / 100
-                odd.U = Math.round(100 * (odd._U / 100 + oddBefore.U)) / 100
-                odd.Time = new Date(odd.Time)
-                odd.Date = self.sameDay(odd.Time, match.odds[j - 1].Time) ? null : odd.Time
-              }
-            }
-          }
-          // console.log(response.data.matches)
-          self.match_items = response.data.matches
-          console.log(self.match_items)
+          self.prices = response.data
+          self.loading_prices = false
         })
         .catch(function (error) {
           console.log(error)
         })
         .then(function () {
-          self.loading = false
         })
     },
 
-    selectMatch (item) {
-      console.log(item)
-      this.matches = [item]
+    selectCompetition (item) {
+      const self = this
+      self.loading_competition = true
+      this.$api.Match.competition({ competition: item.Competition })
+        .then(function (response) {
+          self.competition = response.data
+          self.loading_competition = false
+        })
+        .catch(function (error) {
+          console.log(error)
+        })
+        .then(function () {
+        })
+    },
+
+    selectLeague (item) {
+      const self = this
+      self.loading_league_matches = true
+      this.$api.League.league({ league: item.Id })
+        .then(function (response) {
+          self.league_matches = response.data.matches
+        })
+        .catch(function (error) {
+          console.log(error)
+        })
+        .then(function () {
+          self.loading_league_matches = false
+        })
     },
 
     formatDate (value) {
@@ -317,5 +270,42 @@ export default {
       return moment(value).format('HH:mm')
     }
   }
+
 }
 </script>
+<style>
+
+.equal {
+  background: white
+}
+
+.less {
+  background: #F9E2E8
+}
+
+.more {
+  background: #BED9D2
+}
+
+  tbody tr:nth-of-type(even) {
+    background-color: rgba(236, 237, 237);
+  }
+
+  tbody tr:nth-of-type(odd) {
+    background-color: rgb(250 ,250, 250);
+  }
+
+  .v-data-table-header {
+    background-color: rgba(182, 183, 187);
+    color: white;
+  }
+
+  .v-data-footer {
+    background-color: rgb(250 ,250, 250);
+  }
+
+  .theme--light.v-data-table thead tr th {
+    color: white;
+  }
+
+</style>

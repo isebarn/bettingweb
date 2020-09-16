@@ -8,3 +8,13 @@ League:
 
   - method: league
     get: /leagues/league
+
+Match:
+  - method: list
+    get: /matches
+
+  - method: competition
+    get: /matches/competition
+
+  - method: prices
+    get: /matches/competition/prices
