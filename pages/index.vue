@@ -1,7 +1,7 @@
 <template>
   <v-container>
     <v-row>
-      <v-col :cols="league_matches.length > 0 ? 3 : 12">
+      <v-col :cols="3">
         <v-card>
           <v-card-title>
             Leagues
@@ -26,7 +26,7 @@
       </v-col>
       <v-col
         v-if="league_matches.length > 0"
-        :cols="competition ? 3 : 9"
+        :cols="3"
       >
         <v-card>
           <v-card-title>
@@ -40,13 +40,54 @@
               hide-details
             />
           </v-card-title>
+          <v-spacer />
+          <v-card-text>
+            <v-container>
+              <v-row>
+                <v-menu
+                  v-model="menu_start_date"
+                  :close-on-content-click="true"
+                  transition="scale-transition"
+                  offset-y
+                >
+                  <template v-slot:activator="{ on, attrs }">
+                    <v-text-field
+                      v-model="start_date"
+                      label="start date"
+                      readonly
+                      v-bind="attrs"
+                      v-on="on"
+                    />
+                  </template>
+                  <v-date-picker v-model="start_date" @input="menu_start_date = false" />
+                </v-menu>
+              </v-row>
+              <v-row>
+                <v-menu
+                  v-model="menu_end_date"
+                  :close-on-content-click="true"
+                  transition="scale-transition"
+                  offset-y
+                >
+                  <template v-slot:activator="{ on, attrs }">
+                    <v-text-field
+                      v-model="end_date"
+                      label="end date"
+                      readonly
+                      v-bind="attrs"
+                      v-on="on"
+                    />
+                  </template>
+                  <v-date-picker v-model="end_date" @input="menu_end_date = false" />
+                </v-menu>
+              </v-row>
+            </v-container>
+          </v-card-text>
           <v-data-table
             :headers="league_matches_headers"
             elevation-0
-            :items="league_matches"
+            :items="matches"
             :loading="loading_league_matches"
-            :search="match_search"
-            :custom-filter="matchSearchFilter"
             class="elevation-0"
             @click:row="selectCompetition"
           >
@@ -155,6 +196,9 @@ export default {
 
   data () {
     return {
+      menu_start_date: false,
+      start_date: new Date().toISOString().slice(0, 10),
+      end_date: null,
       expanded: [],
       loading_prices: false,
       current_market: null,
@@ -189,6 +233,26 @@ export default {
   },
 
   computed: {
+    matches () {
+      let results = this.league_matches
+
+      if (this.start_date != null) {
+        results = results.filter(x => moment(x.competition.Date) >= moment(this.start_date))
+      }
+
+      if (this.end_date != null) {
+        results = results.filter(x => moment(x.competition.Date) < moment(this.end_date).add(1, 'days'))
+      }
+
+      if (this.match_search !== '') {
+        results = results.filter(x =>
+          x.home.Value.toLowerCase().includes(this.match_search.toLowerCase()) ||
+          x.away.Value.toLowerCase().includes(this.match_search.toLowerCase()))
+      }
+
+      return results
+    },
+
     price_values () {
       return self.prices
     },
@@ -284,7 +348,7 @@ export default {
       self.loading_league_matches = true
       this.$api.League.league({ league: item.Id })
         .then(function (response) {
-          self.league_matches = response.data.matches
+          self.league_matches = response.data
         })
         .catch(function (error) {
           console.log(error)
