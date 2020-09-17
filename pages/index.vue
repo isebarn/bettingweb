@@ -87,6 +87,33 @@
                 dense
                 :loading="loading_prices"
                 :items-per-page="-1"
+              >
+                <template v-slot:item.Yes.Value="{ item }">
+                  <td v-if="item.Yes" :class="[ item.Yes.Increment == 0 ? 'equal' : (item.Yes.Increment < 0 ? 'less' : 'more')]">
+                    {{ parseFloat(item.Yes.Value).toFixed(2) }}
+                  </td>
+                </template>
+                <template v-slot:item.No.Value="{ item }">
+                  <td v-if="item.No" :class="[ item.No.Increment == 0 ? 'equal' : (item.No.Increment < 0 ? 'less' : 'more')]">
+                    {{ parseFloat(item.No.Value).toFixed(2) }}
+                  </td>
+                </template>
+                <template v-slot:item.Value="{ item }">
+                  <td :class="[ item.increment == 0 ? 'equal' : (item.increment < 0 ? 'less' : 'more')]">
+                    {{ parseFloat(item.Value).toFixed(2) }}
+                  </td>
+                </template>
+                <template v-slot:item.Time="{ item }">
+                  <span> {{ item.Day ? formatDate(item.Time) : formatTime(item.Time) }}</span>
+                </template>
+              </v-data-table>
+              <!--
+              <v-data-table
+                :headers="price_headers"
+                :items="prices"
+                dense
+                :loading="loading_prices"
+                :items-per-page="-1"
                 hide-default-footer
                 hide-default-header
               >
@@ -99,6 +126,7 @@
                   <td> {{ item.Day ? formatDate(item.Time) : formatTime(item.Time) }}</td>
                 </template>
               </v-data-table>
+            -->
             </td>
           </template>
         </v-data-table>
@@ -188,11 +216,14 @@ export default {
       }
       // VAL-OPTIONS LINE
       if (this.current_market.Headers[0] === '') {
-        results.append({ text: 'Result', value: 'MN' })
-        for (let i = 1; this.current_market.Headers.length; i++) {
-          results.append({ text: this.current_market.Headers[i].Value, value: 'Value' })
+        results.push({ text: 'Result', value: 'Description' })
+        for (let i = 1; i < this.current_market.Headers.length; i++) {
+          results.push({
+            text: this.current_market.Headers[i],
+            value: this.current_market.Headers[i] + '.Value'
+          })
         }
-
+        results.push({ text: 'Time', value: 'Time' })
         return results
       }
 
